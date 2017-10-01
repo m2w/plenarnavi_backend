@@ -1,8 +1,62 @@
+# -*- coding: utf-8 -*-
 import re
 import glob
 import itertools
 from datetime import datetime
 import copy
+import logging
+
+
+class Regex:
+    # TODO: delete once absentee_reg_ is rewritten
+    parties = [
+        'CDU/CSU',
+        'SPD',
+        'DIE LINKE',
+        'BÜNDNIS\s90/DIE\sGRÜNEN',
+        'fraktionslos'
+    ]
+
+    # TODO: rewrite regex to be more succinct
+    absentee_reg_ = re.compile(r'^(?P<last_name>[\w-]+)(?: \((?P<electorate>\w+)\))?, ' +
+                               r'(?P<titles>(?:\w{1,2}\. )+)?(?P<first_name>[\w-]+)\s*(?P<reason>\*+)*\s*\n' +
+                               r'(?P<party>[\w/ ]+)\s*\n', re.MULTILINE)
+
+    absentee_reason_reg_ = re.compile(r'^(\*+)\s*([\w ]+)')
+
+    speaker_reg_ = re.compile(r'\s*(?P<role>\w+ )*?(?P<titles>(?:\w{1,2}\. )+)?(?P<first_name>[\w-]+) (?P<last_name>[\w-]+) ?(?:\((?P<party>.*)\))?(?:,(?P<position>[^:]+))?:')
+
+    agenda_regs_ = [
+        re.compile(r'kommen? .* zum? (Tagesordnungspunkt) (\d+(?: \w)?)'),
+        re.compile(r'(?:rufe|jetzt).*(Tagesordnungspunkte?) (\d+(?: \w+)?)(?: (und|bis) (\d+(?: \w+)?))? auf'),
+        re.compile(r'(Tagesordnungspunkten*) ((?:(?:\d+(?: \w+)?)(?:, | sowie )(?:\d+(?: \w+)?))+)\.'),
+        re.compile(r'(Tagesordnungspunkte?) (\d+(?: (?:\w|(\w)\3+)?(?=[ .:]))?).*(?:\.|:)'),
+        re.compile(r'(Tagesordnungspunkte?) (\d+(?: \w+)?) sowie zum? (.*punkte?) (\d+(?: \w+)?)'),
+    ]
+
+    session_reg_ = re.compile(r'\n\s*(\d+)\.\s*Sitzung\s*\n')
+    date_reg_ = re.compile(r'(\d+)\.\s*([^\s]+)\s*(\d+)')
+
+    @staticmethod
+    def strip_dict(groups):
+        for k, v in groups.items():
+            if type(v) is str:
+                groups[k] = v.strip()
+            else:
+                groups[k] = v
+        return groups
+
+    @staticmethod
+    def remove_nones(groups):
+        return tuple([v for v in groups if v is not None])
+
+    @staticmethod
+    def strip_groups(groups):
+        g = []
+        for v in groups:
+            g.append(v.strip())
+        return tuple(g)
+
 
 
 def pairwise(iterable):
@@ -11,33 +65,10 @@ def pairwise(iterable):
     next(b, None)
     return zip(a, b)
 
-parties = [
-        'CDU/CSU',
-        'SPD',
-        'DIE LINKE',
-        'BÜNDNIS\s90/DIE\sGRÜNEN',
-        'fraktionslos'
-    ] 
-
-positions = [
-    'Präsident',
-    'Vizepräsident',
-    'Präsidentin',
-    'Vizepräsidentin'
-]
-regex_speaker = re.compile(r'\n\s+(?:(?P<position>' + '|'.join(positions) + ')\s)?' +
-                           '(?:[Dd]r\.\s+)*' +
-                           '(?P<first_name>[^ ]+) (?P<last_name>[^ ]+)' +
-                           '(?:\s\((?P<electorate>[^ ]+)\))?' +
-                           '(?:\s\((?P<party>' + '|'.join(parties) + ')\))?' + 
-                           '(\s*Bundesminister.*)?:\s*\n')
 
 def parse_header(text):
-    session_regex = re.compile(r'\n\s*(\d+)\.\s*Sitzung\s*\n')
-    date_regex = re.compile(r'(\d+)\.\s*([^\s]+)\s*(\d+)')
-
-    session = session_regex.findall(text)[0]
-    date = date_regex.findall(text)[0]
+    session = Regex.session_reg_.findall(text)[0]
+    date = Regex.date_reg_.findall(text)[0]
 
     month_map = {
         'Januar': 1,
@@ -59,17 +90,13 @@ def parse_header(text):
         'date': "{}.{}.{}".format(date[0], month_map[date[1]], date[2])
     }
 
-def parse_speakers(text, topics):
-    def is_not_in_topic(t, c):
-        return c['start_idx'] <= t['start_idx'] and c['end_idx'] >= t['start_idx']
-    
-    regex_delimiter = re.compile(r'$')
-    
-    end = regex_delimiter.search(text)
+
+def parse_contributions(text):
+    end = re.search(r'$', text)
     
     contributions = []
     #topics_with_contrib = topics.copy()
-    for m, m1 in pairwise(itertools.chain(regex_speaker.finditer(text), [end])):
+    for m, m1 in pairwise(itertools.chain(Regex.speaker_reg_.finditer(text), [end])):
         contrib = {
             'speaker': m.groupdict(),
             'start_idx': m.start(),
@@ -77,15 +104,23 @@ def parse_speakers(text, topics):
             'speech': text[m.end():m1.start()]
         }
         contributions.append(contrib)
-        
+    return contributions
+
+
+def inject_agenda_items(contributions, agenda_items):
+    def is_not_in_range(t, c):
+        return c['start_idx'] <= t['start_idx'] and c['end_idx'] >= t['start_idx']
+    
+    contrib_agenda = copy.deepcopy(contributions)
+
     # add dummy elements in list of speakers for new topics
-    for t in topics:
-        i = next((i for i, c in enumerate(contributions) if is_not_in_topic(t, c)), None)
+    for t in agenda_items:
+        i = next((i for i, c in enumerate(contrib_agenda) if is_not_in_range(t, c)), None)
         if i is not None:
-            contributions.insert(i+1, t)
+            contrib_agenda.insert(i+1, t)
         else:
             print("couldn't find contribution for topic", t['type'], t['id'], t['start_idx'], t['end_idx'])
-    return contributions
+    return contrib_agenda
 
 def parse_excused(text):
     # FIX: look for regex call that can return the last `match` object.
@@ -95,21 +130,14 @@ def parse_excused(text):
     end = re.search(r'\nAnlage\s\d+|\s*\d+\s+Deutscher Bundestag –', text[start.end():])
     
     # TODO: title: Phillip, first_name: Graf
-    regex_excused = re.compile('^(?P<last_name>[^,\s]+) ?'+
-                               '(?:\((?P<electorate>[^,\s]+)\))?,' +
-                               '(?P<title> ?[\w. ]+)* ' +
-                               '(?P<first_name>[^\s]+(?: [^\s]+\.)*)\s*\n' +
-                               '(?P<party>' + '|'.join(parties) + ')\s*\n', re.MULTILINE)
-    
     text_slice = text[start.end(): end.start()+start.end()]
 
-    excused = []
-    for m in re.finditer(regex_excused, text_slice):
-        excused.append(m.groupdict())
+    excused = [m.groupdict() for m in re.finditer(Regex.absentee_reg_, text_slice)]
 
     return excused
 
 
+# TODO: refactor
 def parse_topic_summaries(text):
     start_delimiter = r'\n(Zusatztagesordnungspunkt|Tagesordnungspunkt)\s*(\d+)*:?\n'
     end_delimiters = [
@@ -178,19 +206,24 @@ def split_plenum(text):
     
     return preamble, debate, postamble
 
+def sanitise_transcript(text):
+    text = text.replace(u"\xa0", " ")
+    return text
+
 def parse_plenar_transcript(file):
     text = ''
     with open(file, 'r') as f: 
-        text = f.read().replace(u"\xa0", " ")
+        text = sanitise_transcript(f.read())
     
     preamble, debate, postamble = split_plenum(text)
     
     header = parse_header(preamble)
-    topic_summaries = parse_topic_summaries(preamble)
-    topics = parse_topics(debate, topic_summaries)
-    print([(t['type'], t['id'], t['start_idx'], t['end_idx']) for t in topics])     
-    contributions = parse_speakers(debate, topics)
+    agenda_summary = parse_topic_summaries(preamble)
+    agenda_items = parse_topics(debate, agenda_summary)
+    print([(t['type'], t['id'], t['start_idx'], t['end_idx']) for t in agenda_items])     
+    contributions = parse_contributions(debate)
+    contrib_agenda = inject_agenda_items(contributions, agenda_items)
     
     excused = parse_excused(postamble)
 
-    return header, topic_summaries, contributions, excused
+    return header, agenda_summary, contrib_agenda, excused
