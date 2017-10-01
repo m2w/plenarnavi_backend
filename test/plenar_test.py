@@ -9,34 +9,38 @@ from plenar_parser import Regex, sanitise_transcript
 
 # Plenary speaker examples:
 PLENARY_SPEAKER_TEST_SET = (
-    ('  Präsident Dr. Norbert Lammert: ',
+    ('\n  Präsident Dr. Norbert Lammert: \n',
     {'position': None, 'role': 'Präsident', 'first_name': 'Norbert', 'last_name': 'Lammert', 'titles': 'Dr.', 'party': None}),
-    ('  Herbert Behrens (DIE LINKE): ',
+    ('\n  Herbert Behrens (DIE LINKE): \n',
     {'position': None, 'role': None, 'first_name': 'Herbert', 'last_name': 'Behrens', 'titles': None, 'party': 'DIE LINKE'}),
-    ('  Dr. Anton Hofreiter (BÜNDNIS 90/DIE GRÜNEN): ',
+    ('\n  Dr. Anton Hofreiter (BÜNDNIS 90/DIE GRÜNEN): \n',
     {'position': None, 'role': None, 'first_name': 'Anton', 'last_name': 'Hofreiter', 'titles': 'Dr.', 'party': 'BÜNDNIS 90/DIE GRÜNEN'}),
-    ('  Uwe Beckmeyer, Parl. Staatssekretär bei der Bundesministerin für Wirtschaft und Energie: ',
+    ('\n  Uwe Beckmeyer, Parl. Staatssekretär bei der Bundesministerin für Wirtschaft und Energie: \n',
     {'position': 'Parl. Staatssekretär bei der Bundesministerin für Wirtschaft und Energie', 'role': None, 'first_name': 'Uwe', 'last_name': 'Beckmeyer', 'titles': None, 'party': None}),
-    ('  Enak Ferlemann, Parl. Staatssekretär beim Bundesminister für Verkehr und digitale Infrastruktur: ',
+    ('\n  Enak Ferlemann, Parl. Staatssekretär beim Bundesminister für Verkehr und digitale Infrastruktur: \n',
     {'position': 'Parl. Staatssekretär beim Bundesminister für Verkehr und digitale Infrastruktur', 'role': None, 'first_name': 'Enak', 'last_name': 'Ferlemann', 'titles': None, 'party': None}),
-    ('  Annette Sawade (SPD): ',
+    ('\n  Annette Sawade (SPD): \n',
     {'position': None, 'role': None, 'first_name': 'Annette', 'last_name': 'Sawade', 'titles': None, 'party': 'SPD'}),
-    ('  Michael Donth (CDU/CSU): ',
+    ('\n  Michael Donth (CDU/CSU): \n',
     {'position': None, 'role': None, 'first_name': 'Michael', 'last_name': 'Donth', 'titles': None, 'party': 'CDU/CSU'}),
-    ('  Vizepräsidentin Dr. h. c. Edelgard Bulmahn: ',
+    ('\n  Vizepräsidentin Dr. h. c. Edelgard Bulmahn: \n',
     {'position': None, 'role': 'Vizepräsidentin', 'first_name': 'Edelgard', 'last_name': 'Bulmahn', 'titles': 'Dr. h. c.', 'party': None}),
-    ('  Heiko Maas, Bundesminister der Justiz und für Verbraucherschutz: ',
+    ('\n  Heiko Maas, Bundesminister der Justiz und für Verbraucherschutz: \n',
     {'position': 'Bundesminister der Justiz und für Verbraucherschutz', 'role': None, 'first_name': 'Heiko', 'last_name': 'Maas', 'titles': None, 'party': None}),
-    ('  Hans-Christian Ströbele (BÜNDNIS 90/DIE GRÜNEN): ',
+    ('\n  Hans-Christian Ströbele (BÜNDNIS 90/DIE GRÜNEN): \n',
     {'position': None, 'role': None, 'first_name': 'Hans-Christian', 'last_name': 'Ströbele', 'titles': None, 'party': 'BÜNDNIS 90/DIE GRÜNEN'}),
-    ('  Rita Schwarzelühr-Sutter, Parl. Staatssekretärin bei der Bundesministerin für Umwelt, Naturschutz, Bau und Reaktorsicherheit: ',
+    ('\n  Rita Schwarzelühr-Sutter, Parl. Staatssekretärin bei der Bundesministerin für Umwelt, Naturschutz, Bau und Reaktorsicherheit: \n',
     {'position': 'Parl. Staatssekretärin bei der Bundesministerin für Umwelt, Naturschutz, Bau und Reaktorsicherheit', 'role': None, 'first_name': 'Rita', 'last_name': 'Schwarzelühr-Sutter', 'titles': None, 'party': None})
+    ('\n. Harald Petzold (Havelland) (DIE LINKE): \n',
+    {'position': None, 'role': None, 'first_name': 'Harald', 'last_name': 'Petzold', 'titles': None, 'party': 'DIE LINKE'})
 )
 
 class SpeakerRegex(unittest.TestCase):
     def test(self):
         for t, e in PLENARY_SPEAKER_TEST_SET:
-            match = Regex.speaker_reg_.search(sanitise_transcript(t))
+            t = sanitise_transcript(t)
+            match = Regex.speaker_reg_.search(t)
+            self.assertIsNotNone(match, (t, e))
             groups = Regex.strip_dict(match.groupdict())
             self.assertDictEqual(groups, e)
 

@@ -24,8 +24,8 @@ class Regex:
 
     absentee_reason_reg_ = re.compile(r'^(\*+)\s*([\w ]+)')
 
-    speaker_reg_ = re.compile(r'\s*(?P<role>\w+ )*?(?P<titles>(?:\w{1,2}\. )+)?(?P<first_name>[\w-]+) (?P<last_name>[\w-]+) ?(?:\((?P<party>.*)\))?(?:,(?P<position>[^:]+))?:')
-
+    #speaker_reg_ = re.compile(r'\n\s*(?P<role>\w+ )?(?P<titles>(?:\w{1,2}\. )*)?(?P<first_name>[\w-]+) (?P<last_name>[\w-]+) ?(?:\((?P<party>.*)\))?(?:,(?P<position>[\w ]+))?\:\s*\n')
+    speaker_reg_ = re.compile(r'\n\s*(?P<role>[\w]+ )?(?P<titles>(?:\w{1,2}\. )*)?(?P<first_name>[\w-]+) (?P<last_name>[\w-]+) ?(?:\((?P<party>.*)\))?(?:,(?P<position>[\w ]+))?\:\s*\n')
     agenda_regs_ = [
         re.compile(r'kommen? .* zum? (Tagesordnungspunkt) (\d+(?: \w)?)'),
         re.compile(r'(?:rufe|jetzt).*(Tagesordnungspunkte?) (\d+(?: \w+)?)(?: (und|bis) (\d+(?: \w+)?))? auf'),
@@ -42,6 +42,7 @@ class Regex:
         for k, v in groups.items():
             if type(v) is str:
                 groups[k] = v.strip()
+                if groups[k] == '': groups[k] = None 
             else:
                 groups[k] = v
         return groups
@@ -207,8 +208,7 @@ def split_plenum(text):
     return preamble, debate, postamble
 
 def sanitise_transcript(text):
-    text = text.replace(u"\xa0", " ")
-    return text
+    return text.replace(u"\xa0", " ")
 
 def parse_plenar_transcript(file):
     text = ''

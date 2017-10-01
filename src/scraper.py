@@ -71,8 +71,8 @@ if __name__ == "__main__":
         mock_plenums.append(APIMocker.plenum_short(header, topic_summaries, e_stats))
         mock_plenum = APIMocker.plenum(header, topic_summaries, contributions, excused)
 
-        filebase = os.path.join(OUT_PATH, os.path.basename(f))
+        filebase = os.path.join(OUT_PATH, os.path.basename(f)[2:5])
 
-        APIMocker.persist_json(mock_plenum, filebase + '_plenum.json')
+        APIMocker.persist_json(mock_plenum, filebase + '.json')
     APIMocker.persist_json(mock_plenums, os.path.join(OUT_PATH, 'plenums.json'))
 
