@@ -1,6 +1,7 @@
 import json
 import copy
 
+
 class APIMocker(object):
     @staticmethod
     def persist_json(dictionary, filename):

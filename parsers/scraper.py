@@ -1,10 +1,11 @@
-from urllib.request import urlopen
 import os
-from bs4 import BeautifulSoup
-from APIMocker import APIMocker
-from plenar_parser import parse_plenar_transcript
 from collections import Counter
-import glob
+from urllib.request import urlopen
+
+from bs4 import BeautifulSoup
+
+from api.mock import APIMocker
+from parsers.plenar_parser import parse_plenar_transcript
 
 BASE_URL = 'https://www.bundestag.de'
 PLENAR_URL_SCHEME = BASE_URL + '/ajax/filterlist/de/dokumente/protokolle/plenarprotokolle/plenarprotokolle/-/455046/h_121016ea2f478ddcf3be50587d9fa1f8?limit={limit}&noFilterSet=true&offset={offset}'
@@ -14,12 +15,12 @@ def fetch_resource(url, filename):
     dir_name = os.path.dirname(filename)
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name)
-    
+
     f = urlopen(url)
     data = f.read()
     with open(filename, "wb") as local_file:
         local_file.write(data)
-        
+
 
 def scrape_protocols(params):
     plenar_url = PLENAR_URL_SCHEME.format(**params)
@@ -57,9 +58,9 @@ if __name__ == "__main__":
 
     plenar_params = {'limit': 5, 'offset': 0}
 
-    files = scrape_protocols(plenar_params)  # TODO: aparently, the limit parameter doesn't work
+    files = scrape_protocols(plenar_params)  # TODO: apparently, the limit parameter doesn't work
 
-    #files = glob.glob('/tmp/scraper/*.txt')
+    # files = glob.glob('/tmp/scraper/*.txt')
 
     mock_plenums = []
     for f in files:
@@ -78,4 +79,3 @@ if __name__ == "__main__":
 
         APIMocker.persist_json(mock_plenum, filebase + '.json')
     APIMocker.persist_json(mock_plenums, os.path.join(OUT_PATH, 'plenums.json'))
-
