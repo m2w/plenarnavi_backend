@@ -3,8 +3,7 @@ import unittest
 import sys
 import logging
 
-sys.path.insert(0, '../src')
-from plenar_parser import Regex, sanitise_transcript
+from parsers.PlenarParser import PlenarParser
 
 
 # Plenary speaker examples:

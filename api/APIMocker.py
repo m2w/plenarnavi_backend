@@ -1,7 +1,7 @@
 import json
 import copy
 import os
-from DatabaseManager import DatabaseManager
+from data.DatabaseManager import DatabaseManager
 
 class APIMocker(object):
     def __init__(self, db, out_folder):
@@ -81,10 +81,10 @@ class APIMocker(object):
 
 
 if __name__ == '__main__':
-    OUT_PATH = '../../plenarnavi_frontend/public/data'
+    OUT_PATH = '/tmp/plenarnavi/data'
     if not os.path.isdir(OUT_PATH): os.makedirs(OUT_PATH)
 
-    db = DatabaseManager('data.db')
+    db = DatabaseManager('../data.db')
     api = APIMocker(db, OUT_PATH)
 
     session_list = api.get_session_list(18)

@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, ForeignKey, Column, Integer, String, Table, DateTime, and_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, joinedload, exc
-from UUID import GUID
+from data.UUID import GUID
 import uuid
 import logging
 

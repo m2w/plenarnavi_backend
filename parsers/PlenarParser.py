@@ -5,7 +5,7 @@ import itertools
 import datetime
 import copy
 import logging
-from utils import pairwise
+from parsers.utils import pairwise
 import json
 
 

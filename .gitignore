@@ -1,5 +1,5 @@
 *.pyc
-data/*.db
+*.db
 env/
 .DS_Store
 .ipynb_checkpoints/
