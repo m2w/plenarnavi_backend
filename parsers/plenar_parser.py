@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
-import re
-import glob
-import itertools
-from datetime import datetime
 import copy
-import logging
-from utils import pairwise
+import itertools
 import json
+import logging
+import re
+
+from parsers.utils import pairwise
 
 log = logging.getLogger(__name__)
 FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 logging.basicConfig(format=FORMAT)
 log.setLevel(logging.DEBUG)
+
 
 class Regex:
     absentee_reg_ = re.compile(r'^(?P<last_name>[\w-]+)(?: \((?P<electorate>\w+)\))?, ' +
@@ -20,19 +20,21 @@ class Regex:
 
     absentee_reason_reg_ = re.compile(r'^(\*+)\s*([\w ]+)')
 
-    speaker_reg_ = re.compile(r'\n\s*(?P<role>[\w]+ )?(?P<titles>(?:\w{1,2}\. )*)?(?P<first_name>[\w-]+) (?P<last_name>[\w-]+) ?(?:\((?P<party>.*)\))?(?:,(?P<position>[\w ]+))?\:\s*\n')
-    
+    speaker_reg_ = re.compile(
+        r'\n\s*(?P<role>[\w]+ )?(?P<titles>(?:\w{1,2}\. )*)?(?P<first_name>[\w-]+) (?P<last_name>[\w-]+) ?(?:\((?P<party>.*)\))?(?:,(?P<position>[\w ]+))?\:\s*\n')
+
     agenda_regs_ = [
-        #re.compile(r'kommen? .* zum? ((?:Zusatz|Tagesordnungs)punkte?) (\d+(?:\w|(\w)\3+))'),
-        #re.compile(r'((?:Zusatz|Tagesordnungs)punkte?) (\d+(?: (?:\w|(\w)\3+)?(?=[ .:]))?).*(?:\.|:)'),
-        #re.compile(r'(?:rufe|jetzt).*((?:Zusatz|Tagesordnungs)punkte?) (\d+(?: (?:\w)\2*)?)(?: (und|bis) (\d+(?: (?:\w)\6*)?))? auf'),
-        #re.compile(r'((?:Zusatz|Tagesordnungs)punkte?) (\d+(?: (?:\w)\3*)?).*((?:Zusatz|Tagesordnungs)punkte?) (\d+(?: (?:\w)\6*)?)'),
-        
+        # re.compile(r'kommen? .* zum? ((?:Zusatz|Tagesordnungs)punkte?) (\d+(?:\w|(\w)\3+))'),
+        # re.compile(r'((?:Zusatz|Tagesordnungs)punkte?) (\d+(?: (?:\w|(\w)\3+)?(?=[ .:]))?).*(?:\.|:)'),
+        # re.compile(r'(?:rufe|jetzt).*((?:Zusatz|Tagesordnungs)punkte?) (\d+(?: (?:\w)\2*)?)(?: (und|bis) (\d+(?: (?:\w)\6*)?))? auf'),
+        # re.compile(r'((?:Zusatz|Tagesordnungs)punkte?) (\d+(?: (?:\w)\3*)?).*((?:Zusatz|Tagesordnungs)punkte?) (\d+(?: (?:\w)\6*)?)'),
+
         re.compile(r'kommen? \w{0,10} (?:zum|zu den)? ((?:Zusatz|Tagesordnungs)punkt[ens]*) (\d+(?: \w)?):'),
-        re.compile(r'(?:rufe|jetzt) \w{0,10} ((?:Zusatz|Tagesordnungs)punkt[ens]*) (\d+(?: \w+)?)(?: (und|bis) (\d+(?: \w+)?))? auf'),
-        #re.compile(r'((?:Zusatz|Tagesordnungs)punkt[ens]*) ((?:(?:\d+(?: \w+)?)(?:, | sowie )(?:\d+(?: \w+)?))+)\.'),
-        #re.compile(r'((?:Zusatz|Tagesordnungs)punkt[ens]*) (\d+(?: (?:\w|(\w)\3+)?(?=[ .:]))?).*(?:\.|:)'),
-        #re.compile(r'((?:Zusatz|Tagesordnungs)punkt[ens]*) (\d+(?: \w+)?) sowie (?:zum|zu den)? ((?:Zusatz|Tagesordnungs)punkt[ens]*) (\d+(?: \w+)?)'),
+        re.compile(
+            r'(?:rufe|jetzt) \w{0,10} ((?:Zusatz|Tagesordnungs)punkt[ens]*) (\d+(?: \w+)?)(?: (und|bis) (\d+(?: \w+)?))? auf'),
+        # re.compile(r'((?:Zusatz|Tagesordnungs)punkt[ens]*) ((?:(?:\d+(?: \w+)?)(?:, | sowie )(?:\d+(?: \w+)?))+)\.'),
+        # re.compile(r'((?:Zusatz|Tagesordnungs)punkt[ens]*) (\d+(?: (?:\w|(\w)\3+)?(?=[ .:]))?).*(?:\.|:)'),
+        # re.compile(r'((?:Zusatz|Tagesordnungs)punkt[ens]*) (\d+(?: \w+)?) sowie (?:zum|zu den)? ((?:Zusatz|Tagesordnungs)punkt[ens]*) (\d+(?: \w+)?)'),
     ]
 
     session_reg_ = re.compile(r'\n\s*(\d+)\.\s*Sitzung\s*\n')
@@ -50,7 +52,7 @@ class Regex:
         for k, v in groups.items():
             if type(v) is str:
                 groups[k] = v.strip()
-                if groups[k] == '': groups[k] = None 
+                if groups[k] == '': groups[k] = None
             else:
                 groups[k] = v
         return groups
@@ -65,6 +67,7 @@ class Regex:
         for v in groups:
             g.append(v.strip())
         return tuple(g)
+
 
 def parse_metadata(text):
     session = Regex.session_reg_.findall(text)[0]
@@ -94,6 +97,7 @@ def parse_metadata(text):
         'end_time': "{}:{}".format(end[0], end[1])
     }
 
+
 def parse_contributions(text):
     def is_invalid(s):
         tests = [
@@ -110,7 +114,7 @@ def parse_contributions(text):
         return not all(tests)
 
     end = re.search(r'$', text)
-    
+
     speakers = itertools.filterfalse(lambda x: is_invalid(x.groupdict()), Regex.speaker_reg_.finditer(text))
 
     # TODO: remove/fix
@@ -118,7 +122,6 @@ def parse_contributions(text):
     with open('../data/deputies.json') as f:
         aw_data = f.read()
     aw_data = json.loads(aw_data)
-
 
     contributions = []
     for m, m1 in pairwise(itertools.chain(speakers, [end])):
@@ -135,7 +138,7 @@ def parse_contributions(text):
 def inject_agenda_items(contributions, agenda_items):
     def is_speaker_in_range(t, c):
         return 'speaker' in c and (c['start_idx'] <= t['start_idx'] and c['end_idx'] >= t['start_idx'])
-    
+
     contrib_agenda = copy.deepcopy(contributions)
 
     # add dummy elements in list of speakers for new topics
@@ -143,16 +146,17 @@ def inject_agenda_items(contributions, agenda_items):
         i, c = next(((i, c) for i, c in enumerate(contrib_agenda) if is_speaker_in_range(t, c)), (None, None))
         if i is not None:
             c0 = copy.deepcopy(c)
-            c0['speech'] = c0['speech'][:t['start_idx']-c0['start_idx']]
+            c0['speech'] = c0['speech'][:t['start_idx'] - c0['start_idx']]
             c0['end_idx'] = t['start_idx']
             c1 = copy.deepcopy(c)
-            c1['speech'] = c1['speech'][t['start_idx']-c0['start_idx']:]
-            c1['start_idx'] += t['start_idx']-c0['start_idx']
+            c1['speech'] = c1['speech'][t['start_idx'] - c0['start_idx']:]
+            c1['start_idx'] += t['start_idx'] - c0['start_idx']
             del contrib_agenda[i]
             contrib_agenda[i:i] = [c0, t, c1]
         else:
             log.warn("couldn't find contribution for topic ({}, {})".format(t['type'], t['id']))
     return contrib_agenda
+
 
 def parse_excused(text):
     # FIX: look for regex call that can return the last `match` object.
@@ -160,8 +164,8 @@ def parse_excused(text):
     #      .findall returns just the matched strings
     for start in re.finditer(r'\nAnlage\s\d+\s*\n\s*Liste der entschuldigten Abgeordneten', text): pass
     end = re.search(r'\nAnlage\s\d+|\s*\d+\s+Deutscher Bundestag –', text[start.end():])
-    
-    text_slice = text[start.end(): end.start()+start.end()]
+
+    text_slice = text[start.end(): end.start() + start.end()]
 
     excused = [m.groupdict() for m in re.finditer(Regex.absentee_reg_, text_slice)]
 
@@ -180,8 +184,8 @@ def parse_agenda_summaries(text):
         r'\nAmtliche Mitteilungen\s*\n'
     ]
 
-    agenda_summary_reg = re.compile(start_delimiter + '(.*?(?=(?:' 
-                        + '|'.join(end_delimiters) + ')|$))', re.DOTALL)
+    agenda_summary_reg = re.compile(start_delimiter + '(.*?(?=(?:'
+                                    + '|'.join(end_delimiters) + ')|$))', re.DOTALL)
 
     steno_reference_reg_ = re.compile(r'\n\s*\d{5}\s[ABCD]{1}\s*(?:\n|$)')
 
@@ -193,8 +197,9 @@ def parse_agenda_summaries(text):
             'type': s.groups()[0],
             'id': s.groups()[1],
             'summary': agenda_summary
-        })        
+        })
     return summaries
+
 
 def parse_agenda_debate(text, summaries):
     def is_tagesordnung(s):
@@ -205,10 +210,9 @@ def parse_agenda_debate(text, summaries):
 
     def is_same_type(s, t):
         return (is_tagesordnung(s) and is_tagesordnung(t)) or (is_zusatz(s) and is_zusatz(t))
-    
-    
+
     topics = copy.deepcopy(summaries)
-    
+
     for r in Regex.agenda_regs_:
         agenda_discussions = r.finditer(text)
         for t, t1 in pairwise(itertools.chain(agenda_discussions, [re.search('$', text)])):
@@ -226,9 +230,12 @@ def parse_agenda_debate(text, summaries):
         if not 'start_idx' in s:
             s['start_idx'] = -1
             s['end_idx'] = -1
-            log.warn("No debate found for agenda item: ({}, {}). Setting 'start_idx' and 'end_idx' to default values".format(s['type'], s['id']))
+            log.warn(
+                "No debate found for agenda item: ({}, {}). Setting 'start_idx' and 'end_idx' to default values".format(
+                    s['type'], s['id']))
 
     return topics
+
 
 def match_abgeordnetenwatch(person, aw_data):
     for p in aw_data["profiles"]:
@@ -239,31 +246,34 @@ def match_abgeordnetenwatch(person, aw_data):
             }
             break
     return person
-    
+
+
 def split_plenum(text):
     preamble, rest = re.split(Regex.start_split_reg_, text)
     debate, postamble = re.split(Regex.end_split_reg_, rest)
-        
+
     return preamble, debate, postamble
+
 
 def sanitise_transcript(text):
     return text.replace(u"\xa0", " ")
 
+
 def parse_plenar_transcript(file):
     log.info("Parsing transcript {}".format(file))
     text = ''
-    with open(file, 'r') as f: 
+    with open(file, 'r') as f:
         text = sanitise_transcript(f.read())
-    
+
     metadata = parse_metadata(text)
 
     preamble, debate, postamble = split_plenum(text)
-    
+
     agenda_summary = parse_agenda_summaries(preamble)
     agenda_items = parse_agenda_debate(debate, agenda_summary)
     contributions = parse_contributions(debate)
     contrib_agenda = inject_agenda_items(contributions, agenda_items)
-    
+
     excused, excused_reasons = parse_excused(postamble)
 
     return metadata, agenda_summary, contrib_agenda, excused
