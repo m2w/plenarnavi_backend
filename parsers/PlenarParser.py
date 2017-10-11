@@ -162,18 +162,18 @@ class PlenarParser:
             })
 
         for r in self.agenda_regexs:
-            agenda_discussions = r.finditer(self.protocol)
-            for t, t1 in pairwise(itertools.chain(agenda_discussions, [re.search('$', self.protocol)])):
+            agenda_item_start = r.finditer(self.protocol)
+            for t, t1 in pairwise(itertools.chain(agenda_item_start, [re.search('$', self.protocol)])):
                 # now we need to match the topic summaries with the debate
                 # Hopefully, the summaries will contain the type of topic
                 # in group 0 and the topic id in group 1.
                 self.log.debug(
-                    "processing debate item {}".format((t.groups(), t, r)))
+                    "processing agenda item start match {}".format((t.groups(), t, r)))
                 s = next((s for s in summaries if is_same_type(
                     s['type'], t.groups()[0]) and (s['id'] == t.groups()[1])), None)
                 if not s:
                     self.log.warn(
-                        'Could not match debate item to any agenda items {}'.format(t.groups()))
+                        'Could not match ageenda start match to any agenda summary items {}'.format(t.groups()))
                 else:
                     s['start_idx'] = t.end()
                     s['end_idx'] = t1.start()
