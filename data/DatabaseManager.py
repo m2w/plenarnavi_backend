@@ -37,8 +37,8 @@ class Person(Base):
         back_populates="absentees")
 
     def __repr__(self):
-        return "<User>(first_name='{}', last_name='{}')".format(
-            self.first_name, self.last_name)
+        return "<User>(first_name='{}', last_name='{}', uuid='{}')".format(
+            self.first_name, self.last_name, self.uuid)
 
 
 class Speech(Base):
@@ -52,6 +52,8 @@ class Speech(Base):
 
     agenda_item_uuid = Column(GUID, ForeignKey(
         'agendaitems.uuid'), nullable=True)
+    agenda_item = relationship("AgendaItem", back_populates='speeches')
+
     session_uuid = Column(GUID, ForeignKey('sessions.uuid'))
 
     text = Column(String)
@@ -65,7 +67,7 @@ class AgendaItem(Base):
     name = Column(String)
     agenda_id = Column(Integer)  # TODO: constrain
 
-    speeches = relationship("Speech")
+    speeches = relationship("Speech", lazy="dynamic")
 
     session_uuid = Column(GUID, ForeignKey('sessions.uuid'))
 
@@ -273,4 +275,10 @@ class DatabaseManager:
                     joinedload('absentees')).\
             filter(PlenumSession.electoral_period == electoral_period,
                    PlenumSession.session_number == session_number).\
+            one()
+
+    def get_agenda_items_by_uuid(self, agenda_item_uuid):
+        return self.session.query(AgendaItem).\
+            options(joinedload('speeches')).\
+            filter(AgendaItem.uuid == agenda_item_uuid).\
             one()

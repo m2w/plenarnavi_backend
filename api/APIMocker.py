@@ -50,7 +50,8 @@ class APIMocker(object):
             'uuid': str(i.uuid),
             'name': i.name,
             'summary': i.summary,
-            'agenda_id': i.agenda_id
+            'agenda_id': i.agenda_id,
+            'speeches': [str(s.uuid) for s in i.speeches.all()]
         }
 
     @staticmethod
