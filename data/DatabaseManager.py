@@ -5,7 +5,6 @@ from data.UUID import GUID
 import uuid
 import logging
 
-ELECTORAL_PERIOD_OVERRIDE = 18
 UUID_NAMESPACE = uuid.NAMESPACE_DNS
 
 Base = declarative_base()
@@ -231,7 +230,7 @@ class DatabaseManager:
             raise
         return session.uuid
 
-    def persist_aw_mdbs(self, aw_data):
+    def persist_aw_mdbs(self, aw_data, electoral_period=18):
         persons = []
         for p in aw_data['profiles']:
             personal = p['personal']
@@ -243,7 +242,7 @@ class DatabaseManager:
                     party=p['party'],
                     degree=personal['degree'],
                     image_url=personal['picture']['url'],
-                    electoral_period=ELECTORAL_PERIOD_OVERRIDE
+                    electoral_period=electoral_period
                 )
             )
         try:
