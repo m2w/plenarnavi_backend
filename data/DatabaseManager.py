@@ -159,18 +159,26 @@ class DatabaseManager:
             raise
         return session
 
-    def add_speeches_(self, debate, session):
+    def add_speeches_(self, debate, agenda_mapping, session):
+        def is_agenda_item_for_speech(s, a):
+            return s['end_idx'] >= a['start_idx'] and s['start_idx'] <= a['end_idx']
+
         speeches = []
         for i, d in enumerate(debate):
             person = self.find_or_add_person(d['speaker'])
             uuid_str = str(i) + session.start_time.isoformat()
+
+            agenda_item_uuid = next(
+                (a['uuid'] for a in agenda_mapping if is_agenda_item_for_speech(d, a)), None)
+
             speeches.append(
                 Speech(
                     uuid=uuid.uuid3(UUID_NAMESPACE, uuid_str),
                     text=d['speech'],
                     person_uuid=person.uuid,
                     session_uuid=session.uuid,
-                    speech_id=i
+                    speech_id=i,
+                    agenda_item_uuid=agenda_item_uuid
                 ))
         try:
             self.session.add_all(speeches)
@@ -181,31 +189,39 @@ class DatabaseManager:
 
     def add_agenda_(self, agenda_summary, session):
         agenda_items = []
+        agenda_mapping = []
         for i, a in enumerate(agenda_summary):
             if a['id']:
                 a_name = a['type'] + a['id']
             else:
                 a_name = a['type']
             uuid_str = a['type'] + str(i) + session.start_time.isoformat()
-            agenda_items.append(
-                AgendaItem(
-                    session_uuid=session.uuid,
-                    summary=a['summary'],
-                    name=a_name,
-                    agenda_id=i,
-                    uuid=uuid.uuid3(UUID_NAMESPACE, uuid_str)
-                ))
+            agenda_item = AgendaItem(
+                session_uuid=session.uuid,
+                summary=a['summary'],
+                name=a_name,
+                agenda_id=i,
+                uuid=uuid.uuid3(UUID_NAMESPACE, uuid_str)
+            )
+            agenda_items.append(agenda_item)
+
+            agenda_mapping.append({
+                'uuid': agenda_item.uuid,
+                'start_idx': a['start_idx'],
+                'end_idx': a['end_idx']
+            })
         try:
             self.session.add_all(agenda_items)
         except:
             self.session.rollback()
             raise
-        return agenda_items
+        return agenda_items, agenda_mapping
 
     def persist_session(self, metadata, absent_mdbs, agenda_summary, debate):
         session = self.add_metadata_(metadata, absent_mdbs)
-        speeches = self.add_speeches_(debate, session)
-        agenda_items = self.add_agenda_(agenda_summary, session)
+        agenda_items, agenda_mapping = self.add_agenda_(
+            agenda_summary, session)
+        speeches = self.add_speeches_(debate, agenda_mapping, session)
         try:
             self.session.commit()
         except:

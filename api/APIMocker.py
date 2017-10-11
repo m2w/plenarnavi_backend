@@ -59,7 +59,8 @@ class APIMocker(object):
             'uuid': str(s.uuid),
             'text': s.text,
             'speaker': APIMocker.person_json(s.person),
-            'speech_id': s.speech_id
+            'speech_id': s.speech_id,
+            'agenda_item_uuid': str(s.agenda_item_uuid),
         }
 
     def get_session_list(self, electoral_period):
@@ -84,7 +85,7 @@ if __name__ == '__main__':
     OUT_PATH = '/tmp/plenarnavi/data'
     if not os.path.isdir(OUT_PATH): os.makedirs(OUT_PATH)
 
-    db = DatabaseManager('../data.db')
+    db = DatabaseManager('./data.db')
     api = APIMocker(db, OUT_PATH)
 
     session_list = api.get_session_list(18)

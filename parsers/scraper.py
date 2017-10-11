@@ -66,7 +66,7 @@ if __name__ == "__main__":
     aw_data = json.loads(urlopen(AW_URL).read().decode())
 
     # The DatabaseManager handles all interaction with the database
-    db = DatabaseManager('../data.db')
+    db = DatabaseManager('./data.db')
 
     # Save the data from Abgeordnetenwatch to the database
     db.persist_aw_mdbs(aw_data)
