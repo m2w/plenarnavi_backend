@@ -1,10 +1,18 @@
 from data.models import Person, Speech, AgendaItem, PlenumSession
 from flask_restful import Resource, abort, reqparse, marshal_with, fields
 from data.DatabaseManager import DatabaseManager
+from flask import g, current_app
 
-db = DatabaseManager('./data.db')
+def get_db():
+    """Opens a new database connection if there is none yet for the
+    current application context.
+    """
+    if not hasattr(g, 'db'):
+        g.db = DatabaseManager('./data.db')
+    return g.db
 
 def find_or_abort(model, uuid):
+    db = get_db()
     try:
         return db.session.query(model).filter(model.uuid==uuid).one()
     except Exception as e:
@@ -22,11 +30,12 @@ def find_or_abort(model, uuid):
 #text = Column(String)
 
 speech_parser = reqparse.RequestParser()
+speech_parser.add_argument('uuid', required=True)
 speech_parser.add_argument('person_uuid')
-speech_parser.add_argument('speech_id')
+speech_parser.add_argument('speech_id', required=True, type=int)
 speech_parser.add_argument('agenda_item_uuid')
-speech_parser.add_argument('session_uuid')
-speech_parser.add_argument('text')
+speech_parser.add_argument('session_uuid', required=True)
+speech_parser.add_argument('text', required=True)
 
 speech_fields = {
     'person_uuid': fields.String,
@@ -65,6 +74,7 @@ class PersonResource(Resource):
         args = person_parser.parse_args()
         p = Person(**args)
         try:
+            db = get_db()
             db.session.merge(p)
             db.session.commit()
         except:
@@ -73,6 +83,7 @@ class PersonResource(Resource):
 
     def delete(self, uuid):
         p = find_or_abort(Person, uuid)
+        db = get_db()
         db.session.delete(p)
         db.session.commit()
         return {}, 204
@@ -86,10 +97,12 @@ class SpeechResource(Resource):
     @marshal_with(speech_fields)
     def put(self, uuid):
         args = speech_parser.parse_args()
-        # TODO: currently overwrites non-null fields with nulls if the post data doesn't contain
-        #       those same fields. Not sure if this is what we want.
+        # TODO: currently overwrites non-null fields with nulls if the post data 
+        #       doesn't contain those same fields. Not sure if this is what we want.
+        #       If not: query database for speech with uuid, merge fields manually
         s = Speech(uuid=uuid, **args) 
         try:
+            db = get_db()
             db.session.merge(s)
             db.session.commit()
         except Exception as e:
@@ -99,28 +112,26 @@ class SpeechResource(Resource):
 
     def delete(self, uuid):
         s = find_or_abort(Speech, uuid)
+        db = get_db()
         db.session.delete(s)
         db.session.commit()
         return {}, 204
 
 
 class SpeechListResource(Resource):
-
+    @marshal_with(speech_fields)
     def post(self):
         args = speech_parser.parse_args()
         speech = Speech(**args)
 
-        speeches = db.session.query(Speech).filter(
-            Speech.session_id == s.session_id
-        ).all()
-
         try:
-            for s in speeches:
-                if s.speech_id >= speech.speech_id:
-                    s.speech_id += 1
-                    db.session.merge(s)
-            db.session.add(speech)
+            db = get_db()
+            ps = db.session.query(PlenumSession).filter(PlenumSession.uuid==speech.session_uuid).one()
+            ps.speeches.insert(speech.speech_id, speech)
+            db.session.merge(ps)
+            db.session.add(speech) # TODO: do i need this?
             db.session.commit()
-        except:
+        except Exception as e:
             abort(500, message="Could not add Speech")
+            print(e)
         return speech, 201

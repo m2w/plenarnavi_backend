@@ -1,6 +1,7 @@
 from data.UUID import GUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy import ForeignKey, Column, Integer, String, Table, DateTime
 
 Base = declarative_base()
@@ -63,7 +64,7 @@ class AgendaItem(Base):
     name = Column(String)
     agenda_id = Column(Integer)  # TODO: constrain
 
-    speeches = relationship("Speech", lazy="dynamic")
+    speeches = relationship("Speech", lazy="dynamic", order_by="Speech.speech_id")
 
     session_uuid = Column(GUID, ForeignKey('sessions.uuid'))
 
@@ -77,9 +78,10 @@ class PlenumSession(Base):
     start_time = Column(DateTime)
     end_time = Column(DateTime)
 
-    agenda_items = relationship("AgendaItem")
+    agenda_items = relationship("AgendaItem", order_by='AgendaItem.agenda_id')
 
-    speeches = relationship("Speech")
+    speeches = relationship("Speech", order_by='Speech.speech_id',
+        collection_class=ordering_list('speech_id'))
 
     absentees = relationship(
         "Person",
