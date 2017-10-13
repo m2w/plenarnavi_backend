@@ -6,7 +6,6 @@ import json
 
 from bs4 import BeautifulSoup
 
-from api.APIMocker import APIMocker
 from parsers.PlenarParser import PlenarParser
 from data.DatabaseManager import DatabaseManager
 

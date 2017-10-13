@@ -1,93 +1,22 @@
-from sqlalchemy import create_engine, ForeignKey, Column, Integer, String, Table, DateTime, and_
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker, joinedload, exc
-from data.UUID import GUID
+from sqlalchemy import create_engine, and_
+from sqlalchemy.orm import sessionmaker, joinedload, exc
 import uuid
 import logging
 
+from data.models import Person, Speech, AgendaItem, PlenumSession, Base
+
 UUID_NAMESPACE = uuid.NAMESPACE_DNS
 
-Base = declarative_base()
 
-session_absentee_association_table = Table('session_absentee_association', Base.metadata,
-                                           Column('person_uuid', GUID,
-                                                  ForeignKey('persons.uuid')),
-                                           Column('session_uuid', GUID,
-                                                  ForeignKey('sessions.uuid'))
-                                           )
+def get_session_uuid(session_start_time):
+    return uuid.uuid3(UUID_NAMESPACE, session_start_time.isoformat())
 
+def get_speech_uuid(text, i):
+    return uuid.uuid3(UUID_NAMESPACE, text + str(i))
 
-class Person(Base):
-    __tablename__ = 'persons'
-    uuid = Column(GUID, primary_key=True)
+def get_agenda_item_uuid(summary, session_start_time):
+    return uuid.uuid3(UUID_NAMESPACE, summary + session_start_time.isoformat())
 
-    first_name = Column(String)
-    last_name = Column(String)
-    degree = Column(String)
-    image_url = Column(String)
-    party = Column(String)
-    electoral_period = Column(Integer)
-
-    speeches = relationship("Speech", back_populates="person")
-
-    absent_sessions = relationship(
-        "PlenumSession",
-        secondary=session_absentee_association_table,
-        back_populates="absentees")
-
-    def __repr__(self):
-        return "<User>(first_name='{}', last_name='{}', uuid='{}')".format(
-            self.first_name, self.last_name, self.uuid)
-
-
-class Speech(Base):
-    __tablename__ = 'speeches'
-    uuid = Column(GUID, primary_key=True)
-
-    person_uuid = Column(GUID, ForeignKey('persons.uuid'), nullable=True)
-    person = relationship("Person", back_populates="speeches")
-
-    speech_id = Column(Integer)  # TODO: constrain
-
-    agenda_item_uuid = Column(GUID, ForeignKey(
-        'agendaitems.uuid'), nullable=True)
-    agenda_item = relationship("AgendaItem", back_populates='speeches')
-
-    session_uuid = Column(GUID, ForeignKey('sessions.uuid'))
-
-    text = Column(String)
-
-
-class AgendaItem(Base):
-    __tablename__ = 'agendaitems'
-    uuid = Column(GUID, primary_key=True)
-
-    summary = Column(String)
-    name = Column(String)
-    agenda_id = Column(Integer)  # TODO: constrain
-
-    speeches = relationship("Speech", lazy="dynamic")
-
-    session_uuid = Column(GUID, ForeignKey('sessions.uuid'))
-
-
-class PlenumSession(Base):
-    __tablename__ = 'sessions'
-    uuid = Column(GUID, primary_key=True)
-
-    electoral_period = Column(Integer)
-    session_number = Column(Integer)
-    start_time = Column(DateTime)
-    end_time = Column(DateTime)
-
-    agenda_items = relationship("AgendaItem")
-
-    speeches = relationship("Speech")
-
-    absentees = relationship(
-        "Person",
-        secondary=session_absentee_association_table,
-        back_populates="absent_sessions")
 
 
 class DatabaseManager:
@@ -140,14 +69,13 @@ class DatabaseManager:
         return p
 
     def add_metadata_(self, metadata, absent_mdbs):
-        uuid_str = metadata['session'] + metadata['start_time'].isoformat()
         session = PlenumSession(
             electoral_period=metadata['electoral_period'],
             session_number=metadata['session'],
             start_time=metadata['start_time'],
             end_time=metadata['end_time'],
             absentees=[],
-            uuid=uuid.uuid3(UUID_NAMESPACE, uuid_str))
+            uuid=get_session_uuid(metadata['start_time']))
 
         for m in absent_mdbs:
             person = self.find_or_add_person(m)
@@ -167,14 +95,13 @@ class DatabaseManager:
         speeches = []
         for i, d in enumerate(debate):
             person = self.find_or_add_person(d['speaker'])
-            uuid_str = str(i) + session.start_time.isoformat()
 
             agenda_item_uuid = next(
                 (a['uuid'] for a in agenda_mapping if is_agenda_item_for_speech(d, a)), None)
 
             speeches.append(
                 Speech(
-                    uuid=uuid.uuid3(UUID_NAMESPACE, uuid_str),
+                    uuid=get_speech_uuid(d['speech'], i),
                     text=d['speech'],
                     person_uuid=person.uuid,
                     session_uuid=session.uuid,
@@ -193,16 +120,15 @@ class DatabaseManager:
         agenda_mapping = []
         for i, a in enumerate(agenda_summary):
             if a['id']:
-                a_name = a['type'] + a['id']
+                a_name = a['type'] + '-' + a['id']
             else:
                 a_name = a['type']
-            uuid_str = a['type'] + str(i) + session.start_time.isoformat()
             agenda_item = AgendaItem(
                 session_uuid=session.uuid,
                 summary=a['summary'],
                 name=a_name,
                 agenda_id=i,
-                uuid=uuid.uuid3(UUID_NAMESPACE, uuid_str)
+                uuid=get_agenda_item_uuid(a['summary'], session.start_time)
             )
             agenda_items.append(agenda_item)
 
@@ -251,33 +177,3 @@ class DatabaseManager:
         except:
             self.session.rollback()
             raise
-
-    def get_session_list(self, electoral_period):
-        return self.session.query(PlenumSession).\
-            options(joinedload('agenda_items'),
-                    joinedload('absentees')).\
-            filter(PlenumSession.electoral_period == electoral_period).\
-            all()
-
-    def get_session_by_uuid(self, session_uuid):
-        return self.session.query(PlenumSession).\
-            options(joinedload('agenda_items'),
-                    joinedload('speeches'),
-                    joinedload('absentees')).\
-            filter(PlenumSession.uuid == session_uuid).\
-            one()
-
-    def get_session_by_number(self, electoral_period, session_number):
-        return self.session.query(PlenumSession).\
-            options(joinedload('agenda_items'),
-                    joinedload('speeches'),
-                    joinedload('absentees')).\
-            filter(PlenumSession.electoral_period == electoral_period,
-                   PlenumSession.session_number == session_number).\
-            one()
-
-    def get_agenda_items_by_uuid(self, agenda_item_uuid):
-        return self.session.query(AgendaItem).\
-            options(joinedload('speeches')).\
-            filter(AgendaItem.uuid == agenda_item_uuid).\
-            one()
