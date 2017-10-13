@@ -3,35 +3,13 @@ from flask_restful import Resource, abort, reqparse, marshal_with, fields
 from data.DatabaseManager import DatabaseManager
 from flask import g, current_app
 import uuid
+from data.DatabaseManager import get_session_uuid, get_speech_uuid, get_agenda_item_uuid
 
-def get_db():
-    """Opens a new database connection if there is none yet for the
-    current application context.
-    """
-    if not hasattr(g, 'db'):
-        g.db = DatabaseManager('./data.db')
-    return g.db
 
-def find_or_abort(model, uuid):
-    db = get_db()
-    try:
-        return db.session.query(model).filter(model.uuid==uuid).one()
-    except Exception as e:
-        print(e)
-        abort(404, message="{} '{}' doesn't exist".format(model.__name__, uuid))
-
-# first_name = Column(String)
-# last_name = Column(String)
-# degree = Column(String)
-# image_url = Column(String)
-# party = Column(String)
-# electoral_period = Column(Integer)
-# speeches = relationship("Speech", back_populates="person")
-# absent_sessions
 
 person_parser = reqparse.RequestParser()
-person_parser.add_argument('first_name')
-person_parser.add_argument('last_name')
+person_parser.add_argument('first_name', required=True)
+person_parser.add_argument('last_name', required=True)
 person_parser.add_argument('degree')
 person_parser.add_argument('image_url')
 person_parser.add_argument('party')
@@ -49,15 +27,6 @@ person_fields = {
     'electoral_period': fields.Integer,
 }
 
-#person_uuid = Column(GUID, ForeignKey('persons.uuid'), nullable=True)
-#person = relationship("Person", back_populates="speeches")
-# speech_id = Column(Integer)  # TODO: constrain
-# agenda_item_uuid = Column(GUID, ForeignKey(
-#    'agendaitems.uuid'), nullable=True)
-#agenda_item = relationship("AgendaItem", back_populates='speeches')
-#session_uuid = Column(GUID, ForeignKey('sessions.uuid'))
-#text = Column(String)
-
 speech_parser = reqparse.RequestParser()
 speech_parser.add_argument('person_uuid')
 speech_parser.add_argument('speech_id', required=True, type=int)
@@ -73,7 +42,6 @@ speech_fields = {
     'session_uuid': fields.String,
     'text': fields.String
 }
-
 
 agenda_item_fields = {
     'uuid': fields.String,
@@ -103,6 +71,23 @@ session_fields_full.update({
     'speeches': fields.List(fields.Nested(speech_fields)),
     'absentees': fields.List(fields.Nested(person_fields))
 })
+
+
+def get_db():
+    """Opens a new database connection if there is none yet for the
+    current application context.
+    """
+    if not hasattr(g, 'db'):
+        g.db = DatabaseManager('./data.db')
+    return g.db
+
+def find_or_abort(model, uuid):
+    db = get_db()
+    try:
+        return db.session.query(model).filter(model.uuid==uuid).one()
+    except Exception as e:
+        print(e)
+        abort(404, message="{} '{}' doesn't exist".format(model.__name__, uuid))
 
 
 class SessionResource(Resource):
@@ -187,7 +172,9 @@ class SpeechListResource(Resource):
     @marshal_with(speech_fields)
     def post(self):
         args = speech_parser.parse_args()
-        speech = Speech(**args)
+        uuid = get_speech_uuid(args['text'], args['speech_id'])
+
+        speech = Speech(uuid=uuid, **args)
 
         try:
             db = get_db()

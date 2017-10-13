@@ -8,6 +8,17 @@ from data.models import Person, Speech, AgendaItem, PlenumSession, Base
 UUID_NAMESPACE = uuid.NAMESPACE_DNS
 
 
+def get_session_uuid(session_start_time):
+    return uuid.uuid3(UUID_NAMESPACE, session_start_time.isoformat())
+
+def get_speech_uuid(text, i):
+    return uuid.uuid3(UUID_NAMESPACE, text + str(i))
+
+def get_agenda_item_uuid(summary, session_start_time):
+    return uuid.uuid3(UUID_NAMESPACE, summary + session_start_time.isoformat())
+
+
+
 class DatabaseManager:
 
     def __init__(self, name):
@@ -58,14 +69,13 @@ class DatabaseManager:
         return p
 
     def add_metadata_(self, metadata, absent_mdbs):
-        uuid_str = metadata['session'] + metadata['start_time'].isoformat()
         session = PlenumSession(
             electoral_period=metadata['electoral_period'],
             session_number=metadata['session'],
             start_time=metadata['start_time'],
             end_time=metadata['end_time'],
             absentees=[],
-            uuid=uuid.uuid3(UUID_NAMESPACE, uuid_str))
+            uuid=get_session_uuid(metadata['start_time']))
 
         for m in absent_mdbs:
             person = self.find_or_add_person(m)
@@ -85,14 +95,13 @@ class DatabaseManager:
         speeches = []
         for i, d in enumerate(debate):
             person = self.find_or_add_person(d['speaker'])
-            uuid_str = str(i) + session.start_time.isoformat()
 
             agenda_item_uuid = next(
                 (a['uuid'] for a in agenda_mapping if is_agenda_item_for_speech(d, a)), None)
 
             speeches.append(
                 Speech(
-                    uuid=uuid.uuid3(UUID_NAMESPACE, uuid_str),
+                    uuid=get_speech_uuid(d['speech'], i),
                     text=d['speech'],
                     person_uuid=person.uuid,
                     session_uuid=session.uuid,
@@ -111,16 +120,15 @@ class DatabaseManager:
         agenda_mapping = []
         for i, a in enumerate(agenda_summary):
             if a['id']:
-                a_name = a['type'] + a['id']
+                a_name = a['type'] + '-' + a['id']
             else:
                 a_name = a['type']
-            uuid_str = a['type'] + str(i) + session.start_time.isoformat()
             agenda_item = AgendaItem(
                 session_uuid=session.uuid,
                 summary=a['summary'],
                 name=a_name,
                 agenda_id=i,
-                uuid=uuid.uuid3(UUID_NAMESPACE, uuid_str)
+                uuid=get_agenda_item_uuid(a['summary'], session.start_time)
             )
             agenda_items.append(agenda_item)
 
@@ -169,33 +177,3 @@ class DatabaseManager:
         except:
             self.session.rollback()
             raise
-
-    def get_session_list(self, electoral_period):
-        return self.session.query(PlenumSession).\
-            options(joinedload('agenda_items'),
-                    joinedload('absentees')).\
-            filter(PlenumSession.electoral_period == electoral_period).\
-            all()
-
-    def get_session_by_uuid(self, session_uuid):
-        return self.session.query(PlenumSession).\
-            options(joinedload('agenda_items'),
-                    joinedload('speeches'),
-                    joinedload('absentees')).\
-            filter(PlenumSession.uuid == session_uuid).\
-            one()
-
-    def get_session_by_number(self, electoral_period, session_number):
-        return self.session.query(PlenumSession).\
-            options(joinedload('agenda_items'),
-                    joinedload('speeches'),
-                    joinedload('absentees')).\
-            filter(PlenumSession.electoral_period == electoral_period,
-                   PlenumSession.session_number == session_number).\
-            one()
-
-    def get_agenda_items_by_uuid(self, agenda_item_uuid):
-        return self.session.query(AgendaItem).\
-            options(joinedload('speeches')).\
-            filter(AgendaItem.uuid == agenda_item_uuid).\
-            one()
