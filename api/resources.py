@@ -2,6 +2,7 @@ from data.models import Person, Speech, AgendaItem, PlenumSession
 from flask_restful import Resource, abort, reqparse, marshal_with, fields
 from data.DatabaseManager import DatabaseManager
 from flask import g, current_app
+import uuid
 
 def get_db():
     """Opens a new database connection if there is none yet for the
@@ -18,32 +19,6 @@ def find_or_abort(model, uuid):
     except Exception as e:
         print(e)
         abort(404, message="{} '{}' doesn't exist".format(model.__name__, uuid))
-
-
-#person_uuid = Column(GUID, ForeignKey('persons.uuid'), nullable=True)
-#person = relationship("Person", back_populates="speeches")
-# speech_id = Column(Integer)  # TODO: constrain
-# agenda_item_uuid = Column(GUID, ForeignKey(
-#    'agendaitems.uuid'), nullable=True)
-#agenda_item = relationship("AgendaItem", back_populates='speeches')
-#session_uuid = Column(GUID, ForeignKey('sessions.uuid'))
-#text = Column(String)
-
-speech_parser = reqparse.RequestParser()
-speech_parser.add_argument('uuid', required=True)
-speech_parser.add_argument('person_uuid')
-speech_parser.add_argument('speech_id', required=True, type=int)
-speech_parser.add_argument('agenda_item_uuid')
-speech_parser.add_argument('session_uuid', required=True)
-speech_parser.add_argument('text', required=True)
-
-speech_fields = {
-    'person_uuid': fields.String,
-    'speech_id': fields.Integer,
-    'agenda_item_uuid': fields.String,
-    'session_uuid': fields.String,
-    'text': fields.String
-}
 
 # first_name = Column(String)
 # last_name = Column(String)
@@ -64,9 +39,93 @@ person_parser.add_argument('electoral_period')
 person_parser.add_argument('speeches')
 person_parser.add_argument('absent_sessions')
 
+person_fields = {
+    'uuid': fields.String,
+    'first_name': fields.String,
+    'last_name': fields.String,
+    'degree': fields.String,
+    'image_url': fields.String,
+    'party': fields.String,
+    'electoral_period': fields.Integer,
+}
+
+#person_uuid = Column(GUID, ForeignKey('persons.uuid'), nullable=True)
+#person = relationship("Person", back_populates="speeches")
+# speech_id = Column(Integer)  # TODO: constrain
+# agenda_item_uuid = Column(GUID, ForeignKey(
+#    'agendaitems.uuid'), nullable=True)
+#agenda_item = relationship("AgendaItem", back_populates='speeches')
+#session_uuid = Column(GUID, ForeignKey('sessions.uuid'))
+#text = Column(String)
+
+speech_parser = reqparse.RequestParser()
+speech_parser.add_argument('person_uuid')
+speech_parser.add_argument('speech_id', required=True, type=int)
+speech_parser.add_argument('agenda_item_uuid')
+speech_parser.add_argument('session_uuid', required=True)
+speech_parser.add_argument('text', required=True)
+
+speech_fields = {
+    'uuid': fields.String,
+    'person': fields.Nested(person_fields),
+    'speech_id': fields.Integer,
+    'agenda_item_uuid': fields.String,
+    'session_uuid': fields.String,
+    'text': fields.String
+}
+
+
+agenda_item_fields = {
+    'uuid': fields.String,
+    'session_uuid': fields.String,
+    'summary': fields.String,
+    'name': fields.String,
+    'agenda_id': fields.String,
+    'speeches': fields.List(fields.Nested({'uuid': fields.String}))
+}
+
+agenda_item_summary_fields = agenda_item_fields.copy()
+agenda_item_summary_fields.pop('speeches')
+agenda_item_summary_fields.pop('session_uuid')
+
+session_fields_short = {
+    'uuid': fields.String,
+    'electoral_period': fields.Integer,
+    'session_number': fields.Integer,
+    'start_time': fields.DateTime,
+    'end_time': fields.DateTime,
+    'agenda_items': fields.List(fields.Nested(agenda_item_summary_fields)),
+}
+
+session_fields_full = session_fields_short.copy()
+session_fields_full.update({
+    'agenda_items': fields.List(fields.Nested(agenda_item_fields)),
+    'speeches': fields.List(fields.Nested(speech_fields)),
+    'absentees': fields.List(fields.Nested(person_fields))
+})
+
+
+class SessionResource(Resource):
+    @marshal_with(session_fields_full)
+    def get(self, uuid):
+        return find_or_abort(PlenumSession, uuid)
+
+class SessionListResource(Resource):
+    @marshal_with(session_fields_short)
+    def get(self):
+        db = get_db()
+        return db.session.query(PlenumSession).all()
+
+
+class AgendaItemResource(Resource):
+    @marshal_with(agenda_item_fields)
+    def get(self, uuid):
+        return find_or_abort(AgendaItem, uuid)
+
 
 class PersonResource(Resource):
 
+    @marshal_with(person_fields)
     def get(self, uuid):
         return find_or_abort(Person, uuid)
 
@@ -87,6 +146,12 @@ class PersonResource(Resource):
         db.session.delete(p)
         db.session.commit()
         return {}, 204
+
+class PersonListResource(Resource):
+    @marshal_with(person_fields)
+    def get(self):
+        db = get_db()
+        return db.session.query(Person).all()
 
 
 class SpeechResource(Resource):
