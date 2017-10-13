@@ -45,7 +45,7 @@ class Speech(Base):
     person_uuid = Column(GUID, ForeignKey('persons.uuid'), nullable=True)
     person = relationship("Person", back_populates="speeches")
 
-    speech_id = Column(Integer)  # TODO: constrain
+    speech_id = Column(Integer)
 
     agenda_item_uuid = Column(GUID, ForeignKey(
         'agendaitems.uuid'), nullable=True)
@@ -62,9 +62,10 @@ class AgendaItem(Base):
 
     summary = Column(String)
     name = Column(String)
-    agenda_id = Column(Integer)  # TODO: constrain
+    agenda_id = Column(Integer)
 
-    speeches = relationship("Speech", lazy="dynamic", order_by="Speech.speech_id")
+    speeches = relationship("Speech", order_by="Speech.speech_id",
+        collection_class=ordering_list('speech_id'))
 
     session_uuid = Column(GUID, ForeignKey('sessions.uuid'))
 
@@ -78,7 +79,8 @@ class PlenumSession(Base):
     start_time = Column(DateTime)
     end_time = Column(DateTime)
 
-    agenda_items = relationship("AgendaItem", order_by='AgendaItem.agenda_id')
+    agenda_items = relationship("AgendaItem", order_by='AgendaItem.agenda_id',
+        collection_class=ordering_list('agenda_id'))
 
     speeches = relationship("Speech", order_by='Speech.speech_id',
         collection_class=ordering_list('speech_id'))
