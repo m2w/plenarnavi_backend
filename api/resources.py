@@ -172,7 +172,7 @@ class SpeechListResource(Resource):
     @marshal_with(speech_fields)
     def post(self):
         args = speech_parser.parse_args()
-        uuid = get_speech_uuid(args['text'], args['speech_id'])
+        uuid = get_speech_uuid(args['session_uuid'] + args['text'], args['speech_id'])
 
         speech = Speech(uuid=uuid, **args)
 

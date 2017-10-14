@@ -23,7 +23,9 @@ class DatabaseManager:
 
     def __init__(self, name):
         self.log = logging.getLogger(__name__)
-        self.log.setLevel(logging.DEBUG)
+        self.log.setLevel(logging.WARN)
+        fh = logging.FileHandler('DatabaseManager.log')
+        self.log.addHandler(fh)
         engine = create_engine('sqlite:///{}'.format(name))
         Base.metadata.create_all(engine)
         Session = sessionmaker(bind=engine)
@@ -36,7 +38,7 @@ class DatabaseManager:
         q = self.session.query(Person).\
             filter(Person.first_name == json['first_name'],
                    Person.last_name == json['last_name'],
-                   Person.degree == json['titles'],
+                   # Person.degree == json['titles'],
                    # Person.party==json['party']) TODO: transcript parties
                    # do not match AW parties (CDU vs CDU/CSU, etc.)
                    )
@@ -101,7 +103,7 @@ class DatabaseManager:
 
             speeches.append(
                 Speech(
-                    uuid=get_speech_uuid(d['speech'], i),
+                    uuid=get_speech_uuid(str(session.uuid) + d['speech'], i),
                     text=d['speech'],
                     person_uuid=person.uuid,
                     session_uuid=session.uuid,
