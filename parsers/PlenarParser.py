@@ -25,11 +25,11 @@ class PlenarParser:
         r'\n\(Schluss:\s*(\d+)[.:](\d+).*Uhr\)\.?\s*\n')
 
     # Absentee regexes
-    absentee_regex = re.compile(r'^(?P<last_name>[\w-]+)(?: \((?P<electorate>\w+)\))?, ' +
-                               r'(?P<titles>(?:\w{1,2}\. )+)?(?P<first_name>[\w-]+)\s*(?P<reason>\*+)*\s*\n' +
+    absentee_regex = re.compile(r'^(?P<last_name>[\w -]+)(?: \((?P<electorate>\w+)\))?, ' +
+                               r'(?P<titles>(?:\w{1,2}\. )+)?(?P<first_name>[\w -]+)\s*(?P<reason>\*+)*\s*\n' +
                                r'(?P<party>[\w/ ]+)\s*\n', re.MULTILINE)
 
-    absentee_reason_regex = re.compile(r'^(\*+)\s*([\w ]+)')
+    absentee_reason_regex = re.compile(r'(\*+)([\w ]+)')
 
     absent_mdbs_start_regex = re.compile(
         r'\nAnlage\s\d+\s*\n\s*Liste der entschuldigten Abgeordneten')
@@ -37,7 +37,7 @@ class PlenarParser:
         r'\nAnlage\s\d+|\s*\d+\s+Deutscher Bundestag –')
 
     # Agenda item regexes
-    agenda_start_regex = r'\n(Zusatztagesordnungspunkt|Tagesordnungspunkt)\s*(\d+)*:?\n'
+    agenda_start_regex = r'\n\s*(Zusatztagesordnungspunkt|Tagesordnungspunkt)\s*(\d+)*:?\n'
     agenda_end_regex = [
         agenda_start_regex,
         r'\nAnlage\s*\d*\s*\n',
@@ -56,7 +56,7 @@ class PlenarParser:
 
     # Debate speakers
     speaker_regex = re.compile(
-        r'\n\s*(?P<role>Präsident |Präsidentin |Vizepräsident |Vizepräsidentin )?(?P<titles>(?:\w{1,2}\. )*)?(?P<first_name>[\w-]+) (?P<last_name>[\w-]+) ?(?:\((?P<party>.*)\))?(?:,(?P<position>[\w ]+))?\:\s*\n')
+        r'\n\s*(?P<role>Präsident |Präsidentin |Vizepräsident |Vizepräsidentin )?(?P<titles>(?:\w{1,2}\. )*)?(?P<first_name>[\w-]+) (?P<last_name>[\w-]+) ?(?:\((?P<electorate>\w+)\))? ?(?:\((?P<party>[\w /]+)\))?(?:,(?P<position>[\w \.,]+))?\:\s*\n')
 
     # Month to integer map, required for date parsing if the environment locale is not
     # set to German
@@ -75,22 +75,28 @@ class PlenarParser:
         'Dezember': 12
     }
 
-    def __init__(self, filename):
+    def __init__(self, text):
         self.log = logging.getLogger(__name__)
         self.log.setLevel(logging.DEBUG)
 
-        self.filename = filename
-        # There are some unicode whitespaces '\xa0' peppered through the transcript
-        # these cause some regexes to fail, hence they are replaced with normal
-        # whitespaces.
-        with open(filename, 'r') as f:
-            self.protocol = f.read().replace(u"\xa0", " ")
+        self.protocol = text.replace(u"\xa0", " ")
 
         self.metadata = None
         self.absent_mdbs = None
         self.absent_reasons = None
         self.agenda_summaries = None
         self.debate = None
+
+    @classmethod
+    def from_file(cls, filename):
+        # There are some unicode whitespaces '\xa0' peppered through the transcript
+        # these cause some regexes to fail, hence they are replaced with normal
+        # whitespaces.
+        text = ''
+        with open(filename, 'r') as f:
+            text = f.read().replace(u"\xa0", " ")
+
+        return cls(text)
 
     def parse(self):
         self.parse_metadata_()
@@ -131,8 +137,9 @@ class PlenarParser:
 
         text_slice = self.protocol[start.end(): end.start() + start.end()]
 
-        absentees = [m.groupdict()
+        absentees = [self.strip_dict_strings(m.groupdict())
                      for m in re.finditer(self.absentee_regex, text_slice)]
+
         reasons = [m.groups()
                    for m in re.finditer(self.absentee_reason_regex, text_slice)]
 
@@ -172,7 +179,7 @@ class PlenarParser:
                 s = next((s for s in summaries if is_same_type(
                     s['type'], t.groups()[0]) and (s['id'] == t.groups()[1])), None)
                 if not s:
-                    self.log.warn(
+                    self.log.warning(
                         'Could not match ageenda start match to any agenda summary items {}'.format(t.groups()))
                 else:
                     s['start_idx'] = t.end()
@@ -184,6 +191,8 @@ class PlenarParser:
             tests = [
                 s['first_name'][0].isupper(),
                 s['last_name'][0].isupper(),
+                s['first_name'] != 'Herr',
+                s['first_name'] != 'Frau',
                 len(s['first_name']) >= 2,
                 len(s['last_name']) >= 2
             ]

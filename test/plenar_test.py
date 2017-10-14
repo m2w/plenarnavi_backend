@@ -5,44 +5,62 @@ import logging
 
 from parsers.PlenarParser import PlenarParser
 
-
 # Plenary speaker examples:
 PLENARY_SPEAKER_TEST_SET = (
     ('\n  Präsident Dr. Norbert Lammert: \n',
-    {'position': None, 'role': 'Präsident', 'first_name': 'Norbert', 'last_name': 'Lammert', 'titles': 'Dr.', 'party': None}),
+    {'position': None, 'role': 'Präsident', 'first_name': 'Norbert', 'last_name': 'Lammert', 'titles': 'Dr.', 'party': None, 'electorate': None}),
     ('\n  Herbert Behrens (DIE LINKE): \n',
-    {'position': None, 'role': None, 'first_name': 'Herbert', 'last_name': 'Behrens', 'titles': None, 'party': 'DIE LINKE'}),
+    {'position': None, 'role': None, 'first_name': 'Herbert', 'last_name': 'Behrens', 'titles': None, 'party': 'DIE LINKE', 'electorate': None}),
     ('\n  Dr. Anton Hofreiter (BÜNDNIS 90/DIE GRÜNEN): \n',
-    {'position': None, 'role': None, 'first_name': 'Anton', 'last_name': 'Hofreiter', 'titles': 'Dr.', 'party': 'BÜNDNIS 90/DIE GRÜNEN'}),
+    {'position': None, 'role': None, 'first_name': 'Anton', 'last_name': 'Hofreiter', 'titles': 'Dr.', 'party': 'BÜNDNIS 90/DIE GRÜNEN', 'electorate': None}),
     ('\n  Uwe Beckmeyer, Parl. Staatssekretär bei der Bundesministerin für Wirtschaft und Energie: \n',
-    {'position': 'Parl. Staatssekretär bei der Bundesministerin für Wirtschaft und Energie', 'role': None, 'first_name': 'Uwe', 'last_name': 'Beckmeyer', 'titles': None, 'party': None}),
+    {'position': 'Parl. Staatssekretär bei der Bundesministerin für Wirtschaft und Energie', 'role': None, 'first_name': 'Uwe', 'last_name': 'Beckmeyer', 'titles': None, 'party': None, 'electorate': None}),
     ('\n  Enak Ferlemann, Parl. Staatssekretär beim Bundesminister für Verkehr und digitale Infrastruktur: \n',
-    {'position': 'Parl. Staatssekretär beim Bundesminister für Verkehr und digitale Infrastruktur', 'role': None, 'first_name': 'Enak', 'last_name': 'Ferlemann', 'titles': None, 'party': None}),
+    {'position': 'Parl. Staatssekretär beim Bundesminister für Verkehr und digitale Infrastruktur', 'role': None, 'first_name': 'Enak', 'last_name': 'Ferlemann', 'titles': None, 'party': None, 'electorate': None}),
     ('\n  Annette Sawade (SPD): \n',
-    {'position': None, 'role': None, 'first_name': 'Annette', 'last_name': 'Sawade', 'titles': None, 'party': 'SPD'}),
+    {'position': None, 'role': None, 'first_name': 'Annette', 'last_name': 'Sawade', 'titles': None, 'party': 'SPD', 'electorate': None}),
     ('\n  Michael Donth (CDU/CSU): \n',
-    {'position': None, 'role': None, 'first_name': 'Michael', 'last_name': 'Donth', 'titles': None, 'party': 'CDU/CSU'}),
+    {'position': None, 'role': None, 'first_name': 'Michael', 'last_name': 'Donth', 'titles': None, 'party': 'CDU/CSU', 'electorate': None}),
     ('\n  Vizepräsidentin Dr. h. c. Edelgard Bulmahn: \n',
-    {'position': None, 'role': 'Vizepräsidentin', 'first_name': 'Edelgard', 'last_name': 'Bulmahn', 'titles': 'Dr. h. c.', 'party': None}),
+    {'position': None, 'role': 'Vizepräsidentin', 'first_name': 'Edelgard', 'last_name': 'Bulmahn', 'titles': 'Dr. h. c.', 'party': None, 'electorate': None}),
     ('\n  Heiko Maas, Bundesminister der Justiz und für Verbraucherschutz: \n',
-    {'position': 'Bundesminister der Justiz und für Verbraucherschutz', 'role': None, 'first_name': 'Heiko', 'last_name': 'Maas', 'titles': None, 'party': None}),
+    {'position': 'Bundesminister der Justiz und für Verbraucherschutz', 'role': None, 'first_name': 'Heiko', 'last_name': 'Maas', 'titles': None, 'party': None, 'electorate': None}),
     ('\n  Hans-Christian Ströbele (BÜNDNIS 90/DIE GRÜNEN): \n',
-    {'position': None, 'role': None, 'first_name': 'Hans-Christian', 'last_name': 'Ströbele', 'titles': None, 'party': 'BÜNDNIS 90/DIE GRÜNEN'}),
+    {'position': None, 'role': None, 'first_name': 'Hans-Christian', 'last_name': 'Ströbele', 'titles': None, 'party': 'BÜNDNIS 90/DIE GRÜNEN', 'electorate': None}),
     ('\n  Rita Schwarzelühr-Sutter, Parl. Staatssekretärin bei der Bundesministerin für Umwelt, Naturschutz, Bau und Reaktorsicherheit: \n',
-    {'position': 'Parl. Staatssekretärin bei der Bundesministerin für Umwelt, Naturschutz, Bau und Reaktorsicherheit', 'role': None, 'first_name': 'Rita', 'last_name': 'Schwarzelühr-Sutter', 'titles': None, 'party': None})
-    ('\n. Harald Petzold (Havelland) (DIE LINKE): \n',
-    {'position': None, 'role': None, 'first_name': 'Harald', 'last_name': 'Petzold', 'titles': None, 'party': 'DIE LINKE'})
+    {'position': 'Parl. Staatssekretärin bei der Bundesministerin für Umwelt, Naturschutz, Bau und Reaktorsicherheit', 'role': None, 'first_name': 'Rita', 'last_name': 'Schwarzelühr-Sutter', 'titles': None, 'party': None, 'electorate': None}),
+    ('\n  Harald Petzold (Havelland) (DIE LINKE): \n',
+    {'position': None, 'role': None, 'first_name': 'Harald', 'last_name': 'Petzold', 'titles': None, 'party': 'DIE LINKE', 'electorate': None})
 )
 
-class SpeakerRegex(unittest.TestCase):
-    def test(self):
+PLENARY_SPEAKER_NEG_TEST_SET = (
+    """mit ihrer Arbeit für die eigene Familie zu sorgen und eben nicht in die Abhängigkeit von staatlichen Leistungen zu geraten.
+(Beifall bei Abgeordneten der SPD und der CDU/CSU)
+  Frau Dörner, Sie sagen in Ihrem Antrag selbst völlig zu Recht:
+Das beste Mittel gegen Kinderarmut bleibt die Erwerbstätigkeit ihrer Eltern.""",
+"""(Beifall bei der LINKEN sowie bei Abgeordneten des BÜNDNISSES 90/DIE GRÜNEN)
+  Herr Arnold, ich will Ihnen gerne noch drei Beispiele aus unserer Kleinen Anfrage nennen: 
+  Ein freiwillig Wehrdienstleistender steckt ."""
+)
+class DebateParsing(unittest.TestCase):
+    def test_pos(self):
         for t, e in PLENARY_SPEAKER_TEST_SET:
-            t = sanitise_transcript(t)
-            match = Regex.speaker_reg_.search(t)
-            self.assertIsNotNone(match, (t, e))
-            groups = Regex.strip_dict(match.groupdict())
-            self.assertDictEqual(groups, e)
+            p = PlenarParser(t)
+            p.parse_debate_()
 
+            self.assertEqual(len(p.debate), 1, msg="{}, {}".format(t, e))
+            self.assertTrue('speaker' in p.debate[0], msg="{}, {}".format(t, e))
+            speaker = p.debate[0]['speaker']
+
+            self.assertIsNotNone(speaker, msg="{}, {}".format(t, e))
+            self.assertDictEqual(speaker, e)
+
+    def test_neg(self):
+        for t in PLENARY_SPEAKER_NEG_TEST_SET:
+            p = PlenarParser(t)
+            p.parse_debate_()
+
+            self.assertEqual(len(p.debate), 0, msg="{}, {}".format(t, p.debate))
 
 # Agenda items examples:
 AGENDA_ITEMS_TEST_SET = [
@@ -115,72 +133,109 @@ AGENDA_ITEMS_NEG_TEST_SET = [
         ())
 ]
 
-class AgendaItemsRegex(unittest.TestCase):
+class AgendaItemsParsing(unittest.TestCase):
     def test_pos(self):
         for t, e in AGENDA_ITEMS_TEST_SET:
-            t = sanitise_transcript(t)
+            p = PlenarParser(t)
+            p.parse_agenda_()
 
-            match = None
-            for r in Regex.agenda_regs_:
-                match = r.search(t)
-                if match is not None:
-                    break
-            self.assertIsNotNone(match, t)
-            sanitised_groups = Regex.strip_groups(Regex.remove_nones(match.groups()))
-            self.assertTupleEqual(sanitised_groups, e, "{} {} {}".format(match.groups(), r, t))
+            self.assertEqual(len(p.agenda_summaries), 1, msg="{}, {}".format(t, p.agenda_summaries))
+            self.assertTrue(False, msg="{}, {}".format(t, e))
+            agenda_item = p.agenda_summaries[0]
+
+            self.assertTupleEqual(sanitised_groups, e, "{} {} {}")
 
     def test_neg(self):
         for t, _ in AGENDA_ITEMS_NEG_TEST_SET:
-            t = sanitise_transcript(t)
+            p = PlenarParser(t)
+            p.parse_agenda_()
 
-            match = None
-            for r in Regex.agenda_regs_:
-                match = r.search(t)
-                if match is not None:
-                    break
-            self.assertIsNone(match)
+            self.assertEqual(len(p.agenda_summaries), 0, msg="{}, {}".format(t, p.agenda_summaries))
 
 
 # parse absentee deputies
-ABSENTEE_TEST_SET = [
-    ("""Schmidt (Ühlingen), Gabriele
-CDU/CSU
-30.03.2017""",
-        {'first_name': 'Gabriele', 'last_name': 'Schmidt', 'electorate': 'Ühlingen', 'party': 'CDU/CSU', 'titles': None, 'reason': None}),
-    ("""Schmidt, Dr. Frithjof
+ABSENTEE_TEST_SET = (
+"""
+
+Anlagen zum Stenografischen Bericht
+
+Anlage 1
+Liste der entschuldigten Abgeordneten
+Abgeordnete(r)
+
+entschuldigt bis einschließlich
+Dağdelen, Sevim
+DIE LINKE
+28.04.2017
+De Ridder, Dr. Daniela
+SPD
+28.04.2017
+Dröge, Katharina *
 BÜNDNIS 90/DIE GRÜNEN
-30.03.2017""",
-        {'first_name': 'Frithjof', 'last_name': 'Schmidt', 'electorate': None, 'party': 'BÜNDNIS 90/DIE GRÜNEN', 'titles': 'Dr.', 'reason': None}),
-    ("""Rüthrich, Susann *
-SPD
-30.03.2017""",
-        {'first_name': 'Susann', 'last_name': 'Rüthrich', 'electorate': None, 'party': 'SPD', 'titles': None, 'reason': '*'}),
-    ("""Krüger, Dr. Hans-Ulrich
-SPD
-30.03.2017""",
-        {'first_name': 'Hans-Ulrich', 'last_name': 'Krüger', 'electorate': None, 'party': 'SPD', 'titles': 'Dr.', 'reason': None})
-]
+28.04.2017
+Fabritius, Dr. Bernd
+CDU/CSU
+28.04.2017
+Hein, Dr. Rosemarie
+DIE LINKE
+28.04.2017
+Jung, Xaver
+CDU/CSU
+28.04.2017
+Kindler, Sven-Christian
+BÜNDNIS 90/DIE GRÜNEN
+28.04.2017
+Kühn (Tübingen), Christian
+BÜNDNIS 90/DIE GRÜNEN
+28.04.2017
+Lay, Caren
+DIE LINKE
+28.04.2017
+Lerchenfeld, Philipp Graf
+CDU/CSU
+28.04.2017
+Leyen, Dr. Ursula von der
+CDU/CSU
+28.04.2017
+Schröder (Wiesbaden), Dr. Kristina
+CDU/CSU
+28.04.2017
 
-class AbsenteeRegex(unittest.TestCase):
+*aufgrund gesetzlichen Mutterschutzes
+Anlage 2
+""", 
+        [{'first_name': 'Sevim', 'last_name': 'Dağdelen', 'electorate': None, 'party': 'DIE LINKE', 'titles': None, 'reason': None},
+         {'first_name': 'Daniela', 'last_name': 'De Ridder', 'electorate': None, 'party': 'SPD', 'titles': 'Dr.', 'reason': None},
+         {'first_name': 'Katharina', 'last_name': 'Dröge', 'electorate': None, 'party': 'BÜNDNIS 90/DIE GRÜNEN', 'titles': None, 'reason': '*'},
+         {'first_name': 'Bernd', 'last_name': 'Fabritius', 'electorate': None, 'party': 'CDU/CSU', 'titles': 'Dr.', 'reason': None},
+         {'first_name': 'Rosemarie', 'last_name': 'Hein', 'electorate': None, 'party': 'DIE LINKE', 'titles': 'Dr.', 'reason': None},
+         {'first_name': 'Xaver', 'last_name': 'Jung', 'electorate': None, 'party': 'CDU/CSU', 'titles': None, 'reason': None},
+         {'first_name': 'Sven-Christian', 'last_name': 'Kindler', 'electorate': None, 'party': 'BÜNDNIS 90/DIE GRÜNEN', 'titles': None, 'reason': None},
+         {'first_name': 'Christian', 'last_name': 'Kühn', 'electorate': 'Tübingen', 'party': 'BÜNDNIS 90/DIE GRÜNEN', 'titles': None, 'reason': None},
+         {'first_name': 'Caren', 'last_name': 'Lay', 'electorate': None, 'party': 'DIE LINKE', 'titles': None, 'reason': None},
+         {'first_name': 'Philipp Graf', 'last_name': 'Lerchenfeld', 'electorate': None, 'party': 'CDU/CSU', 'titles': None, 'reason': None},
+         {'first_name': 'Ursula von der', 'last_name': 'Leyen', 'electorate': None, 'party': 'CDU/CSU', 'titles': 'Dr.', 'reason': None},
+         {'first_name': 'Kristina', 'last_name': 'Schröder', 'electorate': 'Wiesbaden', 'party': 'CDU/CSU', 'titles': 'Dr.', 'reason': None},
+
+], [('*', 'aufgrund gesetzlichen Mutterschutzes')
+])
+
+class AbsenteeParsing(unittest.TestCase):
     def test(self):
-        for t, e in ABSENTEE_TEST_SET:
-            match = Regex.absentee_reg_.search(sanitise_transcript(t))
-            self.assertIsNotNone(match, "\nt: {} \ne: {}".format(t, e))
-            groups = Regex.strip_dict(match.groupdict())
-            self.assertDictEqual(groups, e)
+        t, absentees, reasons = ABSENTEE_TEST_SET
+        p = PlenarParser(t)
+        p.parse_absent_mdbs_()
 
-# parse absentee reason
-ABSENTEE_REASON_TEST_SET = [
-    ('*aufgrund gesetzlichen Mutterschutzes', ('*', 'aufgrund gesetzlichen Mutterschutzes'))
-]
+        for person in absentees:
+            self.assertTrue(person in p.absent_mdbs, msg="{}, {}".format(person, p.absent_mdbs))
 
-class AbsenteeReasonRegex(unittest.TestCase):
-    def test(self):
-        for t, e in ABSENTEE_REASON_TEST_SET:
-            match = Regex.absentee_reason_reg_.search(sanitise_transcript(t))
-            self.assertIsNotNone(match, "t: {} e: {}".format(t, e))
-            groups = Regex.strip_groups(match.groups())
-            self.assertTupleEqual(groups, e)
+        self.assertEqual(len(p.absent_mdbs), len(absentees), msg="{}, {}".format(absentees, p.absent_mdbs))
+
+        for reason in reasons:
+            self.assertTrue(reason in p.absent_reasons, msg="{}, {}".format(reason, p.absent_reasons))
+
+        self.assertEqual(len(p.absent_reasons), len(reasons), msg="{}, {}".format(reasons, p.absent_reasons))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -4,6 +4,7 @@ import glob
 import logging
 import json
 
+
 from bs4 import BeautifulSoup
 
 from parsers.PlenarParser import PlenarParser
@@ -72,7 +73,7 @@ if __name__ == "__main__":
 
     # Parse the plenary protocols and save them to the database
     for f in plenar_files:
-        p = PlenarParser(f)
+        p = PlenarParser.from_file(f)
         metadata, absentees, absent_reasons, agenda_summary, debate = p.parse()
         _ = db.persist_session(metadata, absentees, agenda_summary, debate)
 
